@@ -1,0 +1,27 @@
+# Core dependencies
+opencv-python>=4.8.0
+numpy>=1.24.0
+mediapipe>=0.10.0
+
+# macOS specific
+pyobjc-framework-AVFoundation>=9.0
+pyobjc-framework-CoreML>=9.0
+pyobjc-framework-Vision>=9.0
+
+# Core ML tools
+coremltools>=7.0
+
+# Avatar integration
+python-osc>=1.8.0  # For Unity OSC communication
+websockets>=11.0   # For WebSocket communication
+
+# Streaming
+pyvirtualcam>=0.10.0  # Virtual camera
+
+# Optional: Performance monitoring
+psutil>=5.9.0
+
+# Development
+pytest>=7.4.0
+black>=23.0.0
+flake8>=6.0.0
