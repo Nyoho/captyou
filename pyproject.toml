@@ -1,0 +1,78 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "captyou"
+version = "0.1.0"
+description = "リアルタイムポーズ・表情キャプチャシステム for macOS"
+readme = "README.md"
+requires-python = ">=3.9,<3.13"
+license = {text = "MIT"}
+authors = [
+    {name = "CaptyOU Team"},
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Multimedia :: Video :: Capture",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: MacOS :: MacOS X",
+]
+
+dependencies = [
+    "opencv-python>=4.8.0",
+    "numpy>=1.24.0",
+    "mediapipe>=0.10.0",
+    "pyobjc-framework-AVFoundation>=9.0",
+    "pyobjc-framework-CoreML>=9.0",
+    "pyobjc-framework-Vision>=9.0",
+    "coremltools>=7.0",
+    "python-osc>=1.8.0",
+    "websockets>=11.0",
+    "pyvirtualcam>=0.10.0",
+    "sounddevice>=0.4.6",
+    "librosa>=0.10.0",
+    "scipy>=1.11.0",
+    "pyworld>=0.3.4",
+    "praat-parselmouth>=0.4.3",
+    "resampy>=0.4.2",
+    "psutil>=5.9.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Nyoho/captyou"
+Repository = "https://github.com/Nyoho/captyou"
+Issues = "https://github.com/Nyoho/captyou/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=7.4.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py39']
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]

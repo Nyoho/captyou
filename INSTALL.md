@@ -5,31 +5,58 @@
 ### システム要件
 - macOS 11.0 (Big Sur) 以降
 - MacBook Pro with M1/M2/M3チップ推奨（Neural Engine搭載）
-- Python 3.9以降
+- Python 3.9～3.12（3.13は未対応）
 - 8GB RAM以上推奨
 
 ### ソフトウェア要件
-- Python 3.9+
-- pip
+- Python 3.9～3.12
+- uv（推奨）または pip
 - Homebrew（推奨）
 
 ## インストール手順
 
-### 1. リポジトリのクローン
+### 方法A: uv を使う（推奨・最も簡単）
+
+#### 1. uv のインストール
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+#### 2. リポジトリのクローン
 
 ```bash
 git clone https://github.com/yourusername/captyou.git
 cd captyou
 ```
 
-### 2. 仮想環境の作成
+#### 3. 完了！
+
+依存関係は`uv run`を実行した際に自動的にインストールされます。
+仮想環境の作成も不要です。
+
+```bash
+# そのまま実行できます
+uv run examples/basic_demo.py
+```
+
+### 方法B: pip を使う（従来の方法）
+
+#### 1. リポジトリのクローン
+
+```bash
+git clone https://github.com/yourusername/captyou.git
+cd captyou
+```
+
+#### 2. 仮想環境の作成
 
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 ```
 
-### 3. 依存関係のインストール
+#### 3. 依存関係のインストール
 
 ```bash
 # 基本的な依存関係
@@ -42,7 +69,9 @@ pip install pyvirtualcam
 pip install -e ".[dev]"
 ```
 
-### 4. OBS Studio のインストール（Virtual Camera用）
+## 追加ソフトウェアのインストール
+
+### OBS Studio のインストール（Virtual Camera用）
 
 Virtual Cameraを使用する場合は、OBS Studioが必要です。
 
@@ -54,7 +83,7 @@ brew install --cask obs
 # https://obsproject.com/
 ```
 
-### 5. BlackHole のインストール（声質変換用）
+### BlackHole のインストール（声質変換用）
 
 声質変換機能を使用する場合は、BlackHoleが必要です。
 
@@ -73,7 +102,7 @@ brew install blackhole-2ch
 3. 「BlackHole 2ch」と「内蔵出力」の両方にチェック
 4. これでBlackHoleに送った音声を自分でも聞くことができます
 
-### 6. カメラ・マイクアクセス許可の設定
+### カメラ・マイクアクセス許可の設定
 
 macOSのプライバシー設定で、カメラとマイクへのアクセスを許可してください：
 
@@ -86,6 +115,14 @@ macOSのプライバシー設定で、カメラとマイクへのアクセスを
 
 ### 基本デモの実行
 
+#### uvを使う場合
+
+```bash
+uv run examples/basic_demo.py
+```
+
+#### pipを使う場合
+
 ```bash
 python examples/basic_demo.py
 ```
@@ -93,6 +130,18 @@ python examples/basic_demo.py
 カメラ映像が表示され、ポーズと表情がリアルタイムで検出されれば成功です。
 
 ### 声質変換デモの実行
+
+#### uvを使う場合
+
+```bash
+# オーディオデバイス一覧を表示
+uv run examples/voice_conversion_demo.py --list-devices
+
+# 声質変換を実行（男性→女性）
+uv run examples/voice_conversion_demo.py --mode world_vocoder --pitch 5.0
+```
+
+#### pipを使う場合
 
 ```bash
 # オーディオデバイス一覧を表示
@@ -107,8 +156,18 @@ OBSなどの配信ソフトで音声入力としてBlackHoleを選択すると�
 
 ### 統合デモの実行（映像+音声）
 
+#### uvを使う場合
+
 ```bash
-# 完全統合デモ
+uv run examples/full_avatar_demo.py \
+  --unity-host localhost --unity-port 9000 \
+  --enable-voice --voice-pitch 5.0 \
+  --virtual-camera --show-preview
+```
+
+#### pipを使う場合
+
+```bash
 python examples/full_avatar_demo.py \
   --unity-host localhost --unity-port 9000 \
   --enable-voice --voice-pitch 5.0 \

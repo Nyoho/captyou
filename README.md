@@ -15,11 +15,27 @@ MacBook Proの内蔵カメラとNeural Engineを活用した、リアルタイ�
 
 - macOS 11.0 (Big Sur) 以降
 - MacBook Pro with M1/M2/M3チップ推奨（Neural Engine搭載）
-- Python 3.9以降
+- Python 3.9～3.12（3.13は未対応）
 - Blender 3.0以降 または Unity 2021.3以降（オプション）
 - BlackHole または Soundflower（声質変換用、オプション）
 
 ## インストール
+
+### 方法1: uv を使う（推奨）
+
+```bash
+# uvをインストール（まだの場合）
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# リポジトリをクローン
+git clone https://github.com/yourusername/captyou.git
+cd captyou
+
+# 依存関係は自動的に管理されます
+# exampleを実行するだけで自動インストールされます
+```
+
+### 方法2: pip を使う
 
 ```bash
 # リポジトリをクローン
@@ -36,7 +52,38 @@ pip install -r requirements.txt
 
 ## クイックスタート
 
-### 基本的な使用方法
+### サンプルプログラムの実行
+
+#### uvを使う場合（推奨）
+
+```bash
+# 基本デモ（ポーズ・表情キャプチャ）
+uv run examples/basic_demo.py
+
+# 声質変換デモ
+uv run examples/voice_conversion_demo.py --mode world_vocoder --pitch 5.0
+
+# 配信デモ（Unity連携）
+uv run examples/streaming_demo.py --unity-host localhost --unity-port 9000
+
+# 統合デモ（映像+音声）
+uv run examples/full_avatar_demo.py \
+  --unity-host localhost --unity-port 9000 \
+  --enable-voice --voice-pitch 5.0 \
+  --virtual-camera --show-preview
+```
+
+#### pipを使う場合
+
+```bash
+# 基本デモ
+python examples/basic_demo.py
+
+# 声質変換デモ
+python examples/voice_conversion_demo.py --mode world_vocoder --pitch 5.0
+```
+
+### 基本的な使用方法（コードから）
 
 ```python
 from captyou import CameraCapture, PoseEstimator, FaceExpression
