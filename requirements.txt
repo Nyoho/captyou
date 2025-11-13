@@ -18,6 +18,14 @@ websockets>=11.0   # For WebSocket communication
 # Streaming
 pyvirtualcam>=0.10.0  # Virtual camera
 
+# Audio processing
+sounddevice>=0.4.6  # Audio I/O
+librosa>=0.10.0  # Audio analysis and processing
+scipy>=1.11.0  # Signal processing
+pyworld>=0.3.4  # Voice analysis and synthesis (pitch, formant)
+praat-parselmouth>=0.4.3  # Formant analysis
+resampy>=0.4.2  # Audio resampling
+
 # Optional: Performance monitoring
 psutil>=5.9.0
 

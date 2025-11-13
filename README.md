@@ -7,15 +7,17 @@ MacBook Proの内蔵カメラとNeural Engineを活用した、リアルタイ�
 - **リアルタイム処理**: MacBook ProのNeural Engine（Core ML）で高速化
 - **ポーズ推定**: MediaPipe Poseで全身のポーズをキャプチャ
 - **表情認識**: MediaPipe Face Meshで顔の表情を詳細にキャプチャ
+- **声質変換**: リアルタイムで男性の声を女性の声に変換（WORLD Vocoder）
 - **3Dアバター統合**: BlenderまたはUnityに対応
 - **配信対応**: Virtual Camera経由でOBSなどの配信ソフトに統合
 
 ## システム要件
 
 - macOS 11.0 (Big Sur) 以降
-- MacBook Pro with M1/M2/M3チップ（Neural Engine搭載）
+- MacBook Pro with M1/M2/M3チップ推奨（Neural Engine搭載）
 - Python 3.9以降
 - Blender 3.0以降 または Unity 2021.3以降（オプション）
+- BlackHole または Soundflower（声質変換用、オプション）
 
 ## インストール
 
@@ -77,31 +79,50 @@ avatar.send_pose(pose_data)
 avatar.send_expression(face_data)
 ```
 
+### 声質変換（男性→女性）
+
+```python
+from captyou.audio import AudioCapture, VoiceConverter, ConversionMode
+from captyou.audio.virtual_audio import AudioLoopback
+
+# 声質変換器を初期化
+converter = VoiceConverter(
+    mode=ConversionMode.WORLD_VOCODER,
+    pitch_shift_semitones=5.0,  # +5半音
+    formant_shift=1.2,  # 20%高く
+)
+
+# リアルタイムループバック（マイク→仮想デバイス）
+with AudioLoopback(converter=converter) as loopback:
+    # 変換された音声が仮想オーディオデバイスに出力される
+    pass
+```
+
 ## アーキテクチャ
 
 ```
-┌─────────────────┐
-│  MacBook Pro    │
-│  内蔵カメラ      │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Camera Capture │
-│  (AVFoundation) │
-└────────┬────────┘
-         │
-    ┌────┴────┐
-    │         │
-    ▼         ▼
-┌────────┐ ┌────────┐
-│ Pose   │ │ Face   │
-│Estimator│ │Expresn│
-└───┬────┘ └───┬────┘
-    │          │
-    ▼          ▼
-┌─────────────────┐
-│   Core ML       │
+┌─────────────────┐     ┌─────────────────┐
+│  MacBook Pro    │     │  MacBook Pro    │
+│  内蔵カメラ      │     │  内蔵マイク      │
+└────────┬────────┘     └────────┬────────┘
+         │                       │
+         ▼                       ▼
+┌─────────────────┐     ┌─────────────────┐
+│  Camera Capture │     │  Audio Capture  │
+│  (AVFoundation) │     │  (sounddevice)  │
+└────────┬────────┘     └────────┬────────┘
+         │                       │
+    ┌────┴────┐                  ▼
+    │         │         ┌─────────────────┐
+    ▼         ▼         │ Voice Converter │
+┌────────┐ ┌────────┐  │ (WORLD Vocoder) │
+│ Pose   │ │ Face   │  └────────┬────────┘
+│Estimator│ │Expresn│           │
+└───┬────┘ └───┬────┘           ▼
+    │          │        ┌─────────────────┐
+    ▼          ▼        │ Virtual Audio   │
+┌─────────────────┐    │  (BlackHole)    │
+│   Core ML       │    └─────────────────┘
 │ (Neural Engine) │
 └────────┬────────┘
          │
@@ -126,6 +147,7 @@ captyou/
 │   ├── camera/          # カメラキャプチャ
 │   ├── pose/            # ポーズ推定
 │   ├── face/            # 表情認識
+│   ├── audio/           # 音声キャプチャ・声質変換
 │   ├── coreml/          # Core ML変換・最適化
 │   ├── avatar/          # 3Dアバター統合
 │   └── streaming/       # 配信統合

@@ -54,12 +54,33 @@ brew install --cask obs
 # https://obsproject.com/
 ```
 
-### 5. カメラアクセス許可の設定
+### 5. BlackHole のインストール（声質変換用）
 
-macOSのプライバシー設定で、カメラへのアクセスを許可してください：
+声質変換機能を使用する場合は、BlackHoleが必要です。
+
+```bash
+# Homebrewでインストール
+brew install blackhole-2ch
+
+# または公式サイトからダウンロード
+# https://github.com/ExistentialAudio/BlackHole
+```
+
+インストール後、Audio MIDI設定で「複数出力装置」を設定：
+
+1. アプリケーション → ユーティリティ → Audio MIDI設定.app を開く
+2. 左下の「+」をクリック → 「複数出力装置を作成」
+3. 「BlackHole 2ch」と「内蔵出力」の両方にチェック
+4. これでBlackHoleに送った音声を自分でも聞くことができます
+
+### 6. カメラ・マイクアクセス許可の設定
+
+macOSのプライバシー設定で、カメラとマイクへのアクセスを許可してください：
 
 1. システム環境設定 → セキュリティとプライバシー → カメラ
-2. ターミナル（またはPythonアプリ）にチェックを入れる
+   - ターミナル（またはPythonアプリ）にチェックを入れる
+2. システム環境設定 → セキュリティとプライバシー → マイク
+   - ターミナル（またはPythonアプリ）にチェックを入れる
 
 ## 動作確認
 
@@ -70,6 +91,29 @@ python examples/basic_demo.py
 ```
 
 カメラ映像が表示され、ポーズと表情がリアルタイムで検出されれば成功です。
+
+### 声質変換デモの実行
+
+```bash
+# オーディオデバイス一覧を表示
+python examples/voice_conversion_demo.py --list-devices
+
+# 声質変換を実行（男性→女性）
+python examples/voice_conversion_demo.py --mode world_vocoder --pitch 5.0
+```
+
+マイクに向かって話すと、変換された音声がBlackHoleに出力されます。
+OBSなどの配信ソフトで音声入力としてBlackHoleを選択すると、変換された声を配信できます。
+
+### 統合デモの実行（映像+音声）
+
+```bash
+# 完全統合デモ
+python examples/full_avatar_demo.py \
+  --unity-host localhost --unity-port 9000 \
+  --enable-voice --voice-pitch 5.0 \
+  --virtual-camera --show-preview
+```
 
 ### トラブルシューティング
 
