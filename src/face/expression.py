@@ -300,9 +300,39 @@ class FaceExpression:
 
     def _process_coreml(self, image: np.ndarray) -> Optional[FaceLandmarks]:
         """Core MLで表情認識（Neural Engine最適化）"""
-        # TODO: Core ML実装
-        logger.warning("Core ML processing not yet implemented, using MediaPipe")
-        return self._process_mediapipe(image)
+        try:
+            from ..coreml.inference import FaceInference
+
+            # Core ML推論器を初期化（初回のみ）
+            if not hasattr(self, '_coreml_inference'):
+                self._coreml_inference = FaceInference(self.coreml_model_path)
+
+            # 推論実行
+            predictions = self._coreml_inference.predict_from_raw_image(image)
+
+            # ランドマークを抽出
+            image_height, image_width = image.shape[:2]
+            landmarks = self._coreml_inference.extract_landmarks(
+                predictions, image_width, image_height
+            )
+
+            if landmarks is None:
+                return None
+
+            # ブレンドシェイプを計算
+            blend_shapes = self._calculate_blend_shapes(landmarks)
+
+            return FaceLandmarks(
+                landmarks=landmarks,
+                blend_shapes=blend_shapes,
+                timestamp=0.0,
+                confidence=1.0,
+            )
+
+        except Exception as e:
+            logger.error(f"Core ML inference failed: {e}")
+            logger.info("Falling back to MediaPipe")
+            return self._process_mediapipe(image)
 
     def draw_landmarks(
         self, image: np.ndarray, face_landmarks: FaceLandmarks

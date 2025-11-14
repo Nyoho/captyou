@@ -1,65 +1,181 @@
 """
-Core ML変換モジュール
+Core ML変換・モデル管理モジュール
 
-MediaPipeモデルをCore MLに変換し、Neural Engineで最適化します。
+MediaPipeモデルをダウンロードし、Core MLに変換してNeural Engineで最適化します。
 """
 
 import coremltools as ct
 import numpy as np
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict
 import logging
 import os
+import urllib.request
+import zipfile
+import shutil
 
 logger = logging.getLogger(__name__)
+
+
+class MediaPipeModelManager:
+    """
+    MediaPipeモデルマネージャー
+
+    公式モデルのダウンロードと管理を行います。
+    """
+
+    # MediaPipe公式モデルのURL
+    MODELS = {
+        "pose_landmarker": {
+            "url": "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task",
+            "filename": "pose_landmarker_lite.task",
+            "type": "pose",
+        },
+        "pose_landmarker_full": {
+            "url": "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/latest/pose_landmarker_full.task",
+            "filename": "pose_landmarker_full.task",
+            "type": "pose",
+        },
+        "pose_landmarker_heavy": {
+            "url": "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/latest/pose_landmarker_heavy.task",
+            "filename": "pose_landmarker_heavy.task",
+            "type": "pose",
+        },
+        "face_landmarker": {
+            "url": "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task",
+            "filename": "face_landmarker.task",
+            "type": "face",
+        },
+    }
+
+    @staticmethod
+    def download_model(model_name: str, output_dir: str = "models") -> str:
+        """
+        MediaPipe公式モデルをダウンロード
+
+        Args:
+            model_name: モデル名（"pose_landmarker", "face_landmarker"など）
+            output_dir: 出力ディレクトリ
+
+        Returns:
+            ダウンロードしたファイルのパス
+        """
+        if model_name not in MediaPipeModelManager.MODELS:
+            raise ValueError(f"Unknown model: {model_name}")
+
+        model_info = MediaPipeModelManager.MODELS[model_name]
+        os.makedirs(output_dir, exist_ok=True)
+
+        output_path = os.path.join(output_dir, model_info["filename"])
+
+        if os.path.exists(output_path):
+            logger.info(f"Model already exists: {output_path}")
+            return output_path
+
+        logger.info(f"Downloading {model_name} from {model_info['url']}")
+
+        try:
+            urllib.request.urlretrieve(model_info["url"], output_path)
+            logger.info(f"Downloaded: {output_path}")
+            return output_path
+        except Exception as e:
+            logger.error(f"Failed to download model: {e}")
+            raise
+
+    @staticmethod
+    def extract_tflite_from_task(task_path: str, output_dir: Optional[str] = None) -> str:
+        """
+        .taskファイルからTFLiteモデルを抽出
+
+        MediaPipeの.taskファイルは実際にはZIPアーカイブです。
+
+        Args:
+            task_path: .taskファイルのパス
+            output_dir: 出力ディレクトリ（Noneの場合は.taskと同じディレクトリ）
+
+        Returns:
+            抽出されたTFLiteモデルのパス
+        """
+        if output_dir is None:
+            output_dir = os.path.dirname(task_path)
+
+        # .taskファイルをZIPとして展開
+        extract_dir = os.path.join(output_dir, "extracted_" + os.path.basename(task_path))
+
+        try:
+            with zipfile.ZipFile(task_path, 'r') as zip_ref:
+                zip_ref.extractall(extract_dir)
+
+            # TFLiteファイルを探す
+            for root, dirs, files in os.walk(extract_dir):
+                for file in files:
+                    if file.endswith('.tflite'):
+                        tflite_path = os.path.join(root, file)
+
+                        # わかりやすい名前にリネーム
+                        task_basename = os.path.splitext(os.path.basename(task_path))[0]
+                        new_path = os.path.join(output_dir, f"{task_basename}.tflite")
+                        shutil.copy(tflite_path, new_path)
+
+                        # 展開ディレクトリを削除
+                        shutil.rmtree(extract_dir)
+
+                        logger.info(f"Extracted TFLite model: {new_path}")
+                        return new_path
+
+            raise FileNotFoundError("No TFLite model found in .task file")
+
+        except Exception as e:
+            logger.error(f"Failed to extract TFLite model: {e}")
+            if os.path.exists(extract_dir):
+                shutil.rmtree(extract_dir)
+            raise
 
 
 class CoreMLConverter:
     """
     Core ML変換クラス
 
-    MediaPipeなどのモデルをCore MLに変換し、
-    Apple Neural Engineで高速実行できるようにします。
+    TFLiteモデルをCore MLに変換し、Apple Neural Engineで高速実行できるようにします。
     """
 
     @staticmethod
-    def convert_pose_model(
-        onnx_path: str,
+    def convert_tflite_to_coreml(
+        tflite_path: str,
         output_path: str,
-        image_size: Tuple[int, int] = (256, 256),
+        model_type: str = "pose",
+        compute_units: ct.ComputeUnit = ct.ComputeUnit.ALL,
     ) -> bool:
         """
-        ポーズ推定モデルをCore MLに変換
+        TFLiteモデルをCore MLに変換
 
         Args:
-            onnx_path: ONNX形式のモデルパス
+            tflite_path: TFLiteモデルのパス
             output_path: 出力するCore MLモデルパス
-            image_size: 入力画像サイズ (width, height)
+            model_type: モデルタイプ（"pose" or "face"）
+            compute_units: 計算ユニット（ALL=CPU+GPU+ANE）
 
         Returns:
             変換成功時True
         """
         try:
-            logger.info(f"Converting pose model: {onnx_path}")
+            logger.info(f"Converting TFLite model: {tflite_path}")
+            logger.info(f"Output: {output_path}")
+            logger.info(f"Compute units: {compute_units}")
 
-            # ONNXモデルを読み込み
+            # TFLiteモデルを読み込み
             model = ct.convert(
-                onnx_path,
-                inputs=[
-                    ct.ImageType(
-                        name="input",
-                        shape=(1, 3, image_size[1], image_size[0]),
-                        scale=1.0 / 255.0,
-                        bias=[0, 0, 0],
-                    )
-                ],
-                compute_units=ct.ComputeUnit.ALL,  # Neural Engine + GPU + CPUを使用
+                tflite_path,
+                source="tensorflow",
+                compute_units=compute_units,
                 minimum_deployment_target=ct.target.macOS13,
+                convert_to="neuralnetwork",  # Neural Engine対応
             )
 
             # メタデータを追加
-            model.author = "CaptyOU"
-            model.short_description = "Pose estimation model optimized for Neural Engine"
+            model.author = "CaptyOU (MediaPipe)"
+            model.short_description = f"{model_type.capitalize()} landmarker optimized for Neural Engine"
             model.version = "1.0"
+            model.license = "Apache 2.0 (MediaPipe)"
 
             # 保存
             model.save(output_path)
@@ -68,68 +184,21 @@ class CoreMLConverter:
             # モデル情報を表示
             spec = model.get_spec()
             logger.info(f"Model inputs: {[i.name for i in spec.description.input]}")
-            logger.info(f"Model outputs: {[o.name for o in spec.description.output]}")
+            logger.info(f"Model outputs: {[o.name for i in spec.description.output]}")
+
+            # ファイルサイズを表示
+            size_mb = os.path.getsize(output_path) / (1024 * 1024)
+            logger.info(f"Model size: {size_mb:.2f} MB")
 
             return True
 
         except Exception as e:
-            logger.error(f"Failed to convert pose model: {e}")
+            logger.error(f"Failed to convert model: {e}")
+            logger.info("Note: TFLite -> Core ML conversion may require specific TensorFlow versions")
             return False
 
     @staticmethod
-    def convert_face_model(
-        onnx_path: str,
-        output_path: str,
-        image_size: Tuple[int, int] = (192, 192),
-    ) -> bool:
-        """
-        顔認識モデルをCore MLに変換
-
-        Args:
-            onnx_path: ONNX形式のモデルパス
-            output_path: 出力するCore MLモデルパス
-            image_size: 入力画像サイズ (width, height)
-
-        Returns:
-            変換成功時True
-        """
-        try:
-            logger.info(f"Converting face model: {onnx_path}")
-
-            # ONNXモデルを読み込み
-            model = ct.convert(
-                onnx_path,
-                inputs=[
-                    ct.ImageType(
-                        name="input",
-                        shape=(1, 3, image_size[1], image_size[0]),
-                        scale=1.0 / 255.0,
-                        bias=[0, 0, 0],
-                    )
-                ],
-                compute_units=ct.ComputeUnit.ALL,  # Neural Engine + GPU + CPUを使用
-                minimum_deployment_target=ct.target.macOS13,
-            )
-
-            # メタデータを追加
-            model.author = "CaptyOU"
-            model.short_description = (
-                "Face mesh model optimized for Neural Engine"
-            )
-            model.version = "1.0"
-
-            # 保存
-            model.save(output_path)
-            logger.info(f"Model saved: {output_path}")
-
-            return True
-
-        except Exception as e:
-            logger.error(f"Failed to convert face model: {e}")
-            return False
-
-    @staticmethod
-    def optimize_model(
+    def optimize_coreml_model(
         mlmodel_path: str,
         output_path: Optional[str] = None,
         quantize_weights: bool = True,
@@ -152,20 +221,14 @@ class CoreMLConverter:
             model = ct.models.MLModel(mlmodel_path)
 
             if quantize_weights:
-                # 重みを16bit floatに量子化（モデルサイズを削減）
-                from coremltools.models.neural_network import quantization_utils
-
-                # 量子化設定
-                config = {
-                    "mode": "linear_quantization",
-                    "dtype": "float16",
-                }
+                # 16bit float量子化でモデルサイズを削減
+                logger.info("Quantizing weights to float16")
 
                 # 量子化を実行
-                model_spec = model.get_spec()
-                quantized_spec = quantization_utils.quantize_weights(
-                    model_spec, nbits=16
-                )
+                from coremltools.models.neural_network import quantization_utils
+
+                spec = model.get_spec()
+                quantized_spec = quantization_utils.quantize_weights(spec, nbits=16)
 
                 # 新しいモデルを作成
                 model = ct.models.MLModel(quantized_spec)
@@ -179,7 +242,7 @@ class CoreMLConverter:
 
             # ファイルサイズを表示
             size_mb = os.path.getsize(output_path) / (1024 * 1024)
-            logger.info(f"Model size: {size_mb:.2f} MB")
+            logger.info(f"Optimized model size: {size_mb:.2f} MB")
 
             return True
 
@@ -188,7 +251,7 @@ class CoreMLConverter:
             return False
 
     @staticmethod
-    def benchmark_model(mlmodel_path: str, num_iterations: int = 100) -> dict:
+    def benchmark_model(mlmodel_path: str, num_iterations: int = 100) -> Dict[str, float]:
         """
         Core MLモデルのパフォーマンスをベンチマーク
 
@@ -211,19 +274,20 @@ class CoreMLConverter:
             spec = model.get_spec()
             input_name = spec.description.input[0].name
 
-            # 入力タイプに応じてサンプルデータを作成
+            # 入力サイズを取得
             input_type = spec.description.input[0].type
-            if input_type.HasField("imageType"):
-                # 画像入力の場合
-                from PIL import Image
-
+            if input_type.HasField("multiArrayType"):
+                shape = input_type.multiArrayType.shape
+                sample_input = {input_name: np.random.randn(*shape).astype(np.float32)}
+            elif input_type.HasField("imageType"):
                 width = input_type.imageType.width
                 height = input_type.imageType.height
+                from PIL import Image
                 sample_image = Image.new("RGB", (width, height))
                 sample_input = {input_name: sample_image}
             else:
-                # その他の入力
-                sample_input = {input_name: np.random.randn(1, 3, 256, 256)}
+                logger.warning("Unknown input type")
+                return {}
 
             # ウォームアップ
             for _ in range(10):
@@ -256,39 +320,50 @@ class CoreMLConverter:
             logger.error(f"Failed to benchmark model: {e}")
             return {}
 
-    @staticmethod
-    def download_mediapipe_models(output_dir: str = "models") -> bool:
-        """
-        MediaPipe公式モデルをダウンロード
 
-        Args:
-            output_dir: 出力ディレクトリ
+def setup_models(models_dir: str = "models") -> Dict[str, str]:
+    """
+    MediaPipeモデルをダウンロードしてCore MLに変換
 
-        Returns:
-            ダウンロード成功時True
-        """
-        try:
-            import urllib.request
+    Args:
+        models_dir: モデルディレクトリ
 
-            os.makedirs(output_dir, exist_ok=True)
+    Returns:
+        変換されたCore MLモデルのパス辞書
+    """
+    os.makedirs(models_dir, exist_ok=True)
+    converted_models = {}
 
-            models = {
-                "pose_landmark_full.tflite": "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/latest/pose_landmarker_full.task",
-                "face_landmarker.tflite": "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task",
-            }
+    logger.info("Setting up models for Neural Engine...")
 
-            for filename, url in models.items():
-                output_path = os.path.join(output_dir, filename)
-                if os.path.exists(output_path):
-                    logger.info(f"Model already exists: {output_path}")
-                    continue
+    # ポーズモデル（Full版を使用）
+    try:
+        logger.info("\n=== Pose Model ===")
+        task_path = MediaPipeModelManager.download_model("pose_landmarker_full", models_dir)
+        tflite_path = MediaPipeModelManager.extract_tflite_from_task(task_path, models_dir)
+        coreml_path = os.path.join(models_dir, "pose_landmarker.mlmodel")
 
-                logger.info(f"Downloading {filename}...")
-                urllib.request.urlretrieve(url, output_path)
-                logger.info(f"Downloaded: {output_path}")
+        if CoreMLConverter.convert_tflite_to_coreml(
+            tflite_path, coreml_path, model_type="pose"
+        ):
+            converted_models["pose"] = coreml_path
+            logger.info(f"✓ Pose model ready: {coreml_path}")
+    except Exception as e:
+        logger.error(f"Failed to setup pose model: {e}")
 
-            return True
+    # 表情モデル
+    try:
+        logger.info("\n=== Face Model ===")
+        task_path = MediaPipeModelManager.download_model("face_landmarker", models_dir)
+        tflite_path = MediaPipeModelManager.extract_tflite_from_task(task_path, models_dir)
+        coreml_path = os.path.join(models_dir, "face_landmarker.mlmodel")
 
-        except Exception as e:
-            logger.error(f"Failed to download models: {e}")
-            return False
+        if CoreMLConverter.convert_tflite_to_coreml(
+            tflite_path, coreml_path, model_type="face"
+        ):
+            converted_models["face"] = coreml_path
+            logger.info(f"✓ Face model ready: {coreml_path}")
+    except Exception as e:
+        logger.error(f"Failed to setup face model: {e}")
+
+    return converted_models

@@ -221,9 +221,39 @@ class PoseEstimator:
 
     def _process_coreml(self, image: np.ndarray) -> Optional[PoseLandmarks]:
         """Core MLでポーズ推定（Neural Engine最適化）"""
-        # TODO: Core ML実装
-        logger.warning("Core ML processing not yet implemented, using MediaPipe")
-        return self._process_mediapipe(image)
+        try:
+            from ..coreml.inference import PoseInference
+
+            # Core ML推論器を初期化（初回のみ）
+            if not hasattr(self, '_coreml_inference'):
+                self._coreml_inference = PoseInference(self.coreml_model_path)
+
+            # 推論実行
+            predictions = self._coreml_inference.predict_from_raw_image(image)
+
+            # ランドマークを抽出
+            image_height, image_width = image.shape[:2]
+            landmarks = self._coreml_inference.extract_landmarks(
+                predictions, image_width, image_height
+            )
+
+            if landmarks is None:
+                return None
+
+            # 信頼度を計算（全ランドマークの可視性の平均）
+            confidence = float(np.mean(landmarks[:, 3]))
+
+            return PoseLandmarks(
+                landmarks=landmarks,
+                world_landmarks=None,  # Core MLでは世界座標系は未対応
+                timestamp=0.0,
+                confidence=confidence,
+            )
+
+        except Exception as e:
+            logger.error(f"Core ML inference failed: {e}")
+            logger.info("Falling back to MediaPipe")
+            return self._process_mediapipe(image)
 
     def draw_landmarks(
         self,

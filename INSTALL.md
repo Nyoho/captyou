@@ -174,6 +174,40 @@ python examples/full_avatar_demo.py \
   --virtual-camera --show-preview
 ```
 
+## Neural Engine対応（オプション）
+
+MacBook ProのNeural Engineで高速化したい場合は、Core MLモデルをセットアップします。
+
+### モデルのダウンロードと変換
+
+```bash
+python scripts/setup_coreml_models.py
+```
+
+このスクリプトは以下を実行します：
+1. MediaPipe公式モデルをダウンロード
+2. TFLite → Core ML形式に変換
+3. Neural Engine最適化
+4. ベンチマーク実行
+
+### 結果
+
+変換が成功すると、`models/`ディレクトリに以下のファイルが生成されます：
+
+```
+models/
+├── pose_landmarker.mlmodel   # ポーズ推定（Neural Engine対応）
+└── face_landmarker.mlmodel   # 表情認識（Neural Engine対応）
+```
+
+### パフォーマンス向上
+
+- **2-3倍高速化**: 30-60 FPS
+- **レイテンシ削減**: ~20ms
+- **省電力**: バッテリー寿命向上
+
+詳細は [NEURAL_ENGINE.md](NEURAL_ENGINE.md) を参照してください。
+
 ### トラブルシューティング
 
 #### カメラが開けない

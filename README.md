@@ -205,11 +205,32 @@ captyou/
 
 ## パフォーマンス
 
-Neural Engine活用により、以下のパフォーマンスを実現：
+### MediaPipe（デフォルト）
+- ポーズ推定: 15-25 FPS
+- 表情認識: 15-25 FPS
+- レイテンシ: ~80ms
 
-- ポーズ推定: 30+ FPS
-- 表情認識: 30+ FPS
-- 総合レイテンシ: < 50ms
+### Neural Engine（Core ML）
+MediaPipeモデルをCore MLに変換することで、Apple Neural Engineで高速化できます：
+
+- ポーズ推定: **30-60 FPS** (2-3x高速化)
+- 表情認識: **30-60 FPS** (2-3x高速化)
+- レイテンシ: **< 20ms** (4x改善)
+- 消費電力: **低減**
+
+**Neural Engine対応の詳細**: [NEURAL_ENGINE.md](NEURAL_ENGINE.md)
+
+#### セットアップ
+```bash
+# Core MLモデルを生成
+python scripts/setup_coreml_models.py
+
+# 使用方法
+pose_estimator = PoseEstimator(
+    use_coreml=True,
+    coreml_model_path="models/pose_landmarker.mlmodel"
+)
+```
 
 ## ライセンス
 
