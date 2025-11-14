@@ -120,11 +120,19 @@ avatar.update_expression(face_data)
 ```python
 from captyou.avatar import UnityAvatar
 
-avatar = UnityAvatar(host="localhost", port=8000)
+avatar = UnityAvatar(host="localhost", port=9000)
 avatar.connect()
 avatar.send_pose(pose_data)
 avatar.send_expression(face_data)
 ```
+
+**Unity側の準備**: [UNITY_SETUP.md](UNITY_SETUP.md)を参照
+
+必要なもの：
+- Unity 2021.3 LTS以降
+- extOSC（OSC通信ライブラリ）
+- VRM形式またはHumanoid Rigのアバター
+- CaptyOUReceiverスクリプト（ガイドに含まれています）
 
 ### 声質変換（男性→女性）
 
@@ -231,6 +239,12 @@ pose_estimator = PoseEstimator(
     coreml_model_path="models/pose_landmarker.mlmodel"
 )
 ```
+
+## ドキュメント
+
+- **[インストールガイド](INSTALL.md)** - セットアップ手順
+- **[Neural Engine対応](NEURAL_ENGINE.md)** - Core ML/Neural Engineで高速化
+- **[Unity統合ガイド](UNITY_SETUP.md)** - Unity側のセットアップ方法
 
 ## ライセンス
 
