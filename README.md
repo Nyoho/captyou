@@ -109,11 +109,19 @@ for frame in camera.capture():
 ```python
 from captyou.avatar import BlenderAvatar
 
-avatar = BlenderAvatar()
+avatar = BlenderAvatar(host="localhost", port=9000, use_socket=True)
 avatar.connect()
 avatar.update_pose(pose_data)
 avatar.update_expression(face_data)
 ```
+
+**Blender側の準備**: [BLENDER_SETUP.md](BLENDER_SETUP.md)を参照
+
+必要なもの：
+- Blender 3.0以降
+- VRM Add-on for Blender
+- VRM形式のアバター（VRoid Studio等で作成）
+- CaptyOU受信スクリプト（ガイドに含まれています）
 
 ### Unityとの統合（OSC経由）
 
@@ -244,6 +252,7 @@ pose_estimator = PoseEstimator(
 
 - **[インストールガイド](INSTALL.md)** - セットアップ手順
 - **[Neural Engine対応](NEURAL_ENGINE.md)** - Core ML/Neural Engineで高速化
+- **[Blender統合ガイド](BLENDER_SETUP.md)** - Blender（VRM）でのアバター制御
 - **[Unity統合ガイド](UNITY_SETUP.md)** - Unity側のセットアップ方法
 
 ## ライセンス
